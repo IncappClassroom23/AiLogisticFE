@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Create account — AI Logistics</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+
+<div class="auth-shell">
+  <div class="auth-visual">
+    <div style="max-width:420px;">
+      <span class="hero-eyebrow">Join the manifest</span>
+      <h2 class="mt-3 text-paper" style="color:var(--paper);">One account,<br>every shipment.</h2>
+      <p class="text-muted-light mt-3">Customers get AI vehicle matching on every booking. Drivers get a clean queue of assigned loads once admin approves their profile.</p>
+      <div class="waybill mt-5">
+        <div class="d-flex justify-content-between align-items-start">
+          <div><div class="tag-id">SHP-10261</div><h5 class="mt-1">Greater Noida → Gurugram</h5></div>
+          <span class="badge-status badge-pending"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+        </div>
+        <div class="stitch"></div>
+        <div class="small text-ink-soft">AI suggested vehicle</div>
+        <div class="fw-semibold"><i class="bi bi-truck-flatbed me-1"></i>Container Truck</div>
+      </div>
+    </div>
+  </div>
+  
+	
+	  
+  <div class="auth-form-side">
+    <div class="auth-card">
+      <a href="/" class="navbar-brand d-inline-flex mb-4"><span class="brand-mark">AL</span>AI Logistics</a>
+      <h3>Create your account</h3>
+      <p class="text-muted-light small mb-4">Register as a customer to book shipments, or apply as a driver.</p>
+		<p th:if="${success}" th:text="${success}" class="alert alert-success"></p>
+		<p th:if="${error}" th:text="${error}" class="alert alert-danger"></p>
+      <ul class="nav nav-pills mb-4 gap-2" id="roleTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active btn-ghost-light" id="tab-customer" data-bs-toggle="pill" data-bs-target="#pane-customer" type="button">
+            <i class="bi bi-person-badge me-1"></i>Customer
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link btn-ghost-light" id="tab-driver" data-bs-toggle="pill" data-bs-target="#pane-driver" type="button">
+            <i class="bi bi-truck me-1"></i>Driver
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+        <!-- CUSTOMER REGISTER -->
+        <div class="tab-pane fade show active" id="pane-customer">
+          <form id="customerForm" action="/customer/register" method="post">
+            <div class="mb-3">
+              <label class="form-label">Full name</label>
+              <input name="name" type="text" class="form-control" id="cName" placeholder="Your Name" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Email address</label>
+              <input name="email" type="email" class="form-control" id="cEmail" placeholder="you@example.com" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Phone number</label>
+              <input name="phone" type="tel" maxlength="10" minlength="10" class="form-control" id="cPhone" placeholder="9876500000" required>
+            </div>
+		    <div class="mb-3">
+		      <label class="form-label">Password</label>
+		      <input name="password" type="password" class="form-control" id="cPassword" required>
+		    </div>
+            <div id="cError" class="text-danger small mt-3 d-none"></div>
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+			<button type="submit" class="btn btn-amber w-100 mt-4">Create customer account</button>
+          </form>
+        </div>
+
+        <!-- DRIVER REGISTER -->
+        <div class="tab-pane fade" id="pane-driver">
+          <div class="ai-box mb-3">
+            <span class="ai-tag"><i class="bi bi-info-circle"></i>Approval required</span>
+            <p class="small mt-2 mb-0">New driver accounts stay pending until an admin approves them. You'll be able to log in once approved.</p>
+          </div>
+          <form action="/driver/register" method="post" enctype="multipart/form-data" id="driverForm">
+            <div class="mb-3">
+              <label class="form-label">Full name</label>
+              <input name="name" type="text" class="form-control" id="dName" placeholder="Arjun Mehta" required>
+            </div>
+			<div class="mb-3">
+              <label class="form-label">Email address</label>
+              <input name="email" type="email" class="form-control" id="dEmail" placeholder="you@example.com" required>
+            </div>
+            <div class="row g-3 mt-0">
+			  <div class="col-6">
+			    <label class="form-label">Phone number</label>
+			    <input name="phone" type="tel" maxlength="10" minlength="10" class="form-control" id="dPhone" placeholder="98765 00000" required>
+			  </div>
+              <div class="col-6"> 
+                <label class="form-label">Vehicle type</label>
+                <select name="vehicle_type" class="form-select" id="dVehicle" required>
+                  <option value="Bike">Bike</option>
+                  <option value="MiniTruck">Mini Truck</option>
+                  <option value="CargoAuto">Cargo Auto</option>
+                  <option value="Truck">Truck</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label">Vehicle Registration Number</label>
+                <input name="vehicle_rc_no" type="text" class="form-control" id="dLicense" placeholder="DL-04-2021-0093211" required>
+              </div>
+              <div class="col-6">
+                <label class="form-label">Uplaod Vehicle Registration Certificate</label>
+                <input name="rc" type="file" accept=".jpg,.jpeg,.pdf" class="form-control" id="dLicense" required>
+              </div>
+              <div class="col-6">
+                <label class="form-label">Driver License number</label>
+                <input name="driving_license_no" type="text" class="form-control" id="dLicense" placeholder="DL-04-2021-0093211" required>
+              </div>
+              <div class="col-6">
+                <label class="form-label">Uplaod Driver License Certificate</label>
+                <input name="lic" type="file" accept=".jpg,.jpeg,.pdf" class="form-control" id="dLicense" required>
+              </div>
+            </div>
+			<div class="row text-center">
+				<div class="col">
+					<br/>
+					<label class="form-label">Your Location</label>
+					<input type="text" class="form-control" id="sector_city_state" readonly> 
+					<input type="hidden" name="city" id="city_state" required> 
+					<br/>
+					<span onclick="getCurrentLocation()" class="btn btn-sm"
+						style="background: rgba(59, 130, 246, .12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, .2); border-radius: 6px; font-size: .78rem;">
+						<i class="bi bi-crosshair me-1"></i> Use My Current GPS
+						Location
+					</span>
+					<input type="hidden" name="latitude" id="latitude" />
+					<input type="hidden" name="longitude" id="longitude" />
+					<br/><br/>
+					<div id="map" style="height: 300px; width: 80%; margin:auto;"></div>
+				</div>
+				<script>
+					let map;
+					let marker;
+
+					// Initialize Map
+					function loadMap(lat = 28.6139, lng = 77.2090) {
+						if (map) {
+							map.remove();
+						}
+
+						map = L.map('map').setView([lat, lng], 15);
+
+						L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+							attribution: '&copy; OpenStreetMap contributors'
+						}).addTo(map);
+
+						marker = L.marker([lat, lng])
+							.addTo(map)
+							.bindPopup("Your Location")
+							.openPopup();
+
+						updateCoords(lat, lng);
+
+						// Move marker when map is clicked
+						map.on('click', function (e) {
+							const lat = e.latlng.lat;
+							const lng = e.latlng.lng;
+
+							marker.setLatLng([lat, lng])
+								.bindPopup("Your Location")
+								.openPopup();
+
+							updateCoords(lat, lng);
+						});
+					}
+					// Update Coordinates
+					async function updateCoords(lat, lng) {
+
+					    // Save latitude and longitude
+					    document.getElementById("latitude").value = lat;
+					    document.getElementById("longitude").value = lng;
+
+					    const cityStateInput = document.getElementById("city_state");
+						const sectorCityStateInput = document.getElementById("sector_city_state");
+
+					    // Show temporary status
+					    sectorCityStateInput.value = "Fetching location...";
+
+					    try {
+					        const url =
+					            `https://nominatim.openstreetmap.org/reverse` +
+					            `?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1&zoom=18`;
+
+					        const response = await fetch(url);
+
+					        if (!response.ok) {
+					            throw new Error("Unable to fetch address");
+					        }
+
+					        const data = await response.json();
+					        const address = data.address || {};
+
+					        // Find the sector/locality
+					        const sector =
+					            address.neighbourhood ||
+					            address.suburb ||
+					            address.quarter ||
+					            address.residential ||
+					            address.city_district ||
+					            address.road ||
+					            "";
+
+					        // Find the city
+					        const city =
+					            address.city ||
+					            address.town ||
+					            address.municipality ||
+					            address.village ||
+					            address.county ||
+					            "";
+
+					        // Find the state
+					        const state = address.state || "";
+
+					        // Build readable location
+					        const locationParts = [sector, city, state].filter(Boolean);
+							const locationParts2 = [city, state].filter(Boolean);
+
+					        cityStateInput.value = locationParts2.length
+					            ? [...new Set(locationParts2)].join(", ")
+					            : data.display_name || "Location not found";
+							sectorCityStateInput.value = locationParts.length
+					            ? [...new Set(locationParts)].join(", ")
+					            : data.display_name || "Location not found";
+
+					    } catch (error) {
+					        console.error("Reverse geocoding error:", error);
+					        sectorCityStateInput.value = "";
+							cityStateInput.value = "";
+					        alert("Could not fetch the address. Please enter it manually.");
+					    }
+					}
+
+					// Get Current Location
+					function getCurrentLocation() {
+						if (!navigator.geolocation) {
+							alert("Geolocation is not supported by your browser.");
+							return;
+						}
+
+						navigator.geolocation.getCurrentPosition(
+							function (position) {
+								const lat = position.coords.latitude;
+								const lng = position.coords.longitude;
+
+								loadMap(lat, lng);
+							},
+							function (error) {
+								alert("Unable to get pickup location: " + error.message);
+							},
+							{
+								enableHighAccuracy: true,
+								timeout: 10000,
+								maximumAge: 0
+							}
+						);
+					}
+					// Load map when the page is ready
+					document.addEventListener('DOMContentLoaded', function () {
+						loadMap();
+					});
+				</script>
+			</div>
+            <div class="row g-3 mt-0">
+              <div class="col">
+                <label class="form-label">Password</label>
+                <input name="password" type="password" class="form-control" id="dPassword" required>
+              </div>
+            </div>
+            <div id="dError" class="text-danger small mt-3 d-none"></div>
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+			<button type="submit" class="btn btn-teal w-100 mt-4">Submit driver application</button>
+          </form>
+        </div>
+      </div>
+
+      <p class="text-muted-light small mt-4 text-center">Already have an account? <a href="login" class="text-amber">Log in</a></p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/app.js"></script>
+
+</body>
+</html>

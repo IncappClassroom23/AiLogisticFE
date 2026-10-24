@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Driver Dashboard — AI Logistics</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" th:href="@{/assets/css/style.css}">
+</head>
+<body>
+<div class="app-shell">
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <aside class="app-sidebar" id="appSidebar">
+    <a th:href="@{/driver/driver-dashboard}" class="navbar-brand mb-4 d-inline-flex"><span class="brand-mark">AL</span>AI Logistics</a>
+    <div class="sidebar-section-label">Driver</div>
+    <a th:href="@{/driver/driver-dashboard}" class="sidebar-link active"><i class="bi bi-grid-1x2"></i>My Deliveries</a>
+	<a th:href="@{/driver/driver-earnings}" class="sidebar-link"><i class="bi bi-grid-1x2"></i>My Earnings</a>
+	<div class="sidebar-section-label">Duty Status [<small th:text='${session.driver.rideStatus}'></small>] </div>
+	<a th:href="@{/driver/SetRideStatus}"  class="sidebar-link"><i class="bi bi-box-arrow-right"></i>
+			<span th:if="${session.driver.rideStatus=='Busy'}">ON</span>
+			<span th:if="${session.driver.rideStatus=='Free'}">OFF</span>
+	</a>
+    <div class="sidebar-section-label">Account</div>
+    <a th:href="@{/logout}"  class="sidebar-link logout-link"><i class="bi bi-box-arrow-right"></i>Log out</a>
+  </aside>
+
+  <main class="app-main">
+		    <div class="app-topbar">
+		      <div class="d-flex align-items-center gap-3">
+		        <button class="btn btn-sm btn-ghost-light d-lg-none" id="sidebarToggle"><i class="bi bi-list"></i></button>
+		        <div class="fw-semibold">My Deliveries</div>
+		      </div>
+		    </div>
+		
+		    <div class="app-content">
+		      <div class="d-flex flex-wrap gap-2 mb-3" id="filterBar">
+				<a th:href="@{/driver/driver-dashboard}" class="btn btn-sm btn-ghost-light active">All</a>
+				<a th:href="@{/driver/driver-dashboard(status='Pending')}" class="btn btn-sm btn-ghost-light">Pending</a>
+				<a th:href="@{/driver/driver-dashboard(status='InTransit')}" class="btn btn-sm btn-ghost-light">In Transit</a>
+				<a th:href="@{/driver/driver-dashboard(status='Delivered')}" class="btn btn-sm btn-ghost-light">Delivered</a>
+				<a th:href="@{/driver/driver-dashboard(status='Cancelled')}" class="btn btn-sm btn-ghost-light">Cancelled</a>
+		      </div>
+		
+		      <div class="panel">
+				<div class="table-responsive">
+		          <table class="table table-manifest align-middle mb-0">
+		            <thead>
+		              <th>Shipment ID</th><th>Description</th><th>Customer</th><th>Vehicle</th><th>Status</th><th>Pickup Date</th><th class="text-end">Actions</th>
+		            </thead>
+		            <tbody >
+		            	<tr th:each="shipment : ${shipments}">
+			            	<td th:text='${shipment.id}'></td>
+			            	<td th:text='${shipment.description}'></td>
+			            	<td th:text='${shipment.customer_name}'></td>
+			            	<td th:text='${shipment.vtype}'></td>
+			            	<td th:text='${shipment.status}'></td>
+							<td th:text="${#temporals.format(shipment.pickup_datetime, 'dd MMM yyyy hh:mm a')}"></td>
+			            	<th class="text-end">
+			            		<form th:action="@{/driver/ShipmentDetails}" method="post">
+		                   			<input type="hidden" name="id" th:value="${shipment.id}" />
+		                   			<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+									<button class="btn btn-primary">View Shipment</button>
+		                   		</form>
+								<a th:if="${shipment.status != 'Delivered' and shipment.status != 'Cancelled'}"
+								   class="btn btn-danger"
+								   th:href="@{/shipment/ShipmentStatus(status='Pending', id=${shipment.id})}">
+								    Reject
+								</a>
+								<a th:if="${shipment.status != 'Delivered' and shipment.status != 'Cancelled'}"
+								   class="btn btn-success"
+								   th:href="@{/shipment/ShipmentStatus(status='InTransit', id=${shipment.id})}">
+								    Accept
+								</a>
+			            	</th>
+		            	</tr>
+		            </tbody>
+		          </table>
+		        </div>
+		      </div>
+		    </div>
+		  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

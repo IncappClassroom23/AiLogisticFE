@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Book Shipment — AI Logistics</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+	<link rel="stylesheet" th:href="@{/assets/css/style.css}">
+
+</head>
+
+<body>
+	<div class="app-shell">
+		<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+		<aside class="app-sidebar" id="appSidebar">
+			<a th:href="@{/customer/customer-dashboard}" class="navbar-brand mb-4 d-inline-flex"><span class="brand-mark">AL</span>AI
+				Logistics</a>
+			<div class="sidebar-section-label">Customer</div>
+			<a th:href="@{/customer/customer-dashboard}" class="sidebar-link"><i class="bi bi-grid-1x2"></i>Dashboard</a> <a
+				th:href="@{/customer/book-shipment}" class="sidebar-link active"><i class="bi bi-box-seam"></i>Book
+				Shipment</a> <a th:href="@{/customer/shipments}" class="sidebar-link"><i class="bi bi-list-ul"></i>My Shipments</a>
+			<div class="sidebar-section-label">Account</div>
+			<a th:href="@{/logout}" class="sidebar-link logout-link"><i class="bi bi-box-arrow-right"></i>Log out</a>
+		</aside>
+
+		
+		<main class="app-main text-white">
+
+		    <div class="app-topbar">
+		        <div class="d-flex align-items-center gap-3">
+		            <button class="btn btn-sm btn-ghost-light d-lg-none"
+		                    id="sidebarToggle">
+		                <i class="bi bi-list"></i>
+		            </button>
+		            <div class="fw-semibold">Shipment Tracking</div>
+		        </div>
+		    </div>
+
+		    <div class="app-content">
+
+		        <!-- Shipment Information -->
+		        <div class="panel mb-4">
+
+		            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+		                <div>
+		                    <h5 class="mb-1">Shipment #<span th:text="${shipment.id}"></span></h5>
+		                    <small class="text-white"
+		                           th:text="${shipment.description}"></small>
+		                </div>
+
+		                <span class="badge bg-warning text-dark"
+		                      th:text="${shipment.status}">
+		                    Pending
+		                </span>
+		            </div>
+
+		            <div class="row g-3">
+
+		                <div class="col-md-4">
+		                    <div class="border rounded p-3 h-100">
+		                        <small class="text-white">Customer</small>
+		                        <h6 class="mt-1 mb-0"
+		                            th:text="${shipment.customer_name}"></h6>
+		                        <small th:text="${shipment.customer_id}"></small>
+		                    </div>
+		                </div>
+
+		                <div class="col-md-4">
+		                    <div class="border rounded p-3 h-100">
+		                        <small class="text-white">Assigned Driver</small>
+		                        <h6 class="mt-1 mb-0"
+		                            th:text="${shipment.driver_name} ?: 'Not assigned'"></h6>
+		                        <small th:text="${shipment.driver_id}"></small>
+		                    </div>
+		                </div>
+
+		                <div class="col-md-4">
+		                    <div class="border rounded p-3 h-100">
+		                        <small class="text-white">Vehicle Type</small>
+		                        <h6 class="mt-1 mb-0"
+		                            th:text="${shipment.vtype}"></h6>
+		                        <small class="text-white">Shipment amount</small>
+		                        <div class="fw-bold">
+		                            ₹<span th:text="${shipment.amount}"></span>
+		                        </div>
+		                    </div>
+		                </div>
+
+		            </div>
+		        </div>
+
+		        <!-- Map -->
+				
+				<!-- Leaflet CSS -->
+				<link rel="stylesheet"
+				      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+				<!-- Map Panel -->
+				<div class="panel mb-4">
+
+				    <div class="d-flex justify-content-between align-items-center mb-3">
+				        <h5 class="mb-0">Live Shipment Tracking</h5>
+				        <span class="badge bg-success" id="mapStatus">
+				            Initializing map...
+				        </span>
+				    </div>
+
+				    <div id="shipmentMap"
+				         style="height: 450px; width: 100%; border-radius: 10px;
+				                z-index: 1; background: #e5e7eb;">
+				    </div>
+
+				    <div class="d-flex flex-wrap gap-3 mt-3">
+				        <span><span style="color:green">●</span> Pickup</span>
+				        <span><span style="color:red">●</span> Delivery</span>
+				        <span><span style="color:blue">●</span> Driver</span>
+				    </div>
+
+				    <p id="trackingMessage" class="text-muted mt-2 mb-0">
+				        Loading shipment locations...
+				    </p>
+				</div>
+
+				<!-- Leaflet JavaScript -->
+				<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+				<script th:inline="javascript">
+
+				    const shipmentId = /*[[${shipment.id}]]*/ 0;
+
+				    const pickup = {
+				        lat: Number(/*[[${shipment.pickup_latitude}]]*/ 0),
+				        lng: Number(/*[[${shipment.pickup_longitude}]]*/ 0)
+				    };
+
+				    const delivery = {
+				        lat: Number(/*[[${shipment.drop_latitude}]]*/ 0),
+				        lng: Number(/*[[${shipment.drop_longitude}]]*/ 0)
+				    };
+
+				    const driver = {
+				        lat: Number(/*[[${shipment.current_latitude}]]*/ 0),
+				        lng: Number(/*[[${shipment.current_longitude}]]*/ 0)
+				    };
+
+				    function validLocation(point) {
+				        return Number.isFinite(point.lat)
+				            && Number.isFinite(point.lng)
+				            && point.lat >= -90 && point.lat <= 90
+				            && point.lng >= -180 && point.lng <= 180
+				            && !(point.lat === 0 && point.lng === 0);
+				    }
+
+				    if (typeof L === "undefined") {
+				        document.getElementById("mapStatus").textContent =
+				            "Leaflet failed to load";
+
+				        document.getElementById("trackingMessage").textContent =
+				            "Check your internet connection and Leaflet CDN access.";
+
+				        throw new Error("Leaflet library is unavailable");
+				    }
+
+				    if (!validLocation(pickup) || !validLocation(delivery)) {
+				        document.getElementById("mapStatus").textContent =
+				            "Invalid coordinates";
+
+				        document.getElementById("trackingMessage").textContent =
+				            "Please verify pickup and delivery latitude/longitude.";
+
+				        throw new Error("Invalid pickup or delivery coordinates");
+				    }
+
+				    // 1. Initialize map
+				    const map = L.map("shipmentMap");
+
+				    // 2. Load OpenStreetMap tiles
+				    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+				        maxZoom: 19,
+				        attribution: "&copy; OpenStreetMap contributors"
+				    }).addTo(map);
+
+				    // 3. Pickup marker
+				    const pickupMarker = L.marker(pickup)
+				        .addTo(map)
+				        .bindPopup("<b>Pickup Location</b><br>Shipment origin");
+
+				    // 4. Delivery marker
+				    const deliveryMarker = L.marker(delivery)
+				        .addTo(map)
+				        .bindPopup("<b>Delivery Location</b><br>Destination");
+
+				    // 5. Initial straight-line route (fallback)
+				    let routeLine = L.polyline(
+				        [pickup, delivery],
+				        {
+				            color: "#2563eb",
+				            weight: 4,
+				            dashArray: "8, 8"
+				        }
+				    ).addTo(map);
+
+				    // Fit map around pickup and delivery
+				    map.fitBounds(
+				        L.latLngBounds([pickup, delivery]),
+				        { padding: [40, 40] }
+				    );
+
+				    // 6. Driver's current location
+				    let driverMarker = null;
+
+				    function updateDriverLocation(point) {
+
+				        if (!validLocation(point)) {
+				            document.getElementById("trackingMessage").textContent =
+				                "Pickup and delivery are visible. Driver GPS location is not available yet.";
+				            return;
+				        }
+
+				        if (driverMarker) {
+				            driverMarker.setLatLng(point);
+				        } else {
+				            driverMarker = L.marker(point)
+				                .addTo(map)
+				                .bindPopup("<b>Driver Current Location</b>");
+				        }
+
+				        document.getElementById("trackingMessage").textContent =
+				            "Driver location updated at " +
+				            new Date().toLocaleTimeString();
+
+				    }
+
+				    updateDriverLocation(driver);
+
+				    document.getElementById("mapStatus").textContent = "Map loaded";
+
+				    // 7. Get actual driving route using OSRM
+				    async function loadRoadRoute() {
+
+				        const url =
+				            "https://router.project-osrm.org/route/v1/driving/" +
+				            pickup.lng + "," + pickup.lat + ";" +
+				            delivery.lng + "," + delivery.lat +
+				            "?overview=full&geometries=geojson";
+
+				        try {
+				            const response = await fetch(url);
+
+				            if (!response.ok) {
+				                throw new Error("Routing service unavailable");
+				            }
+
+				            const data = await response.json();
+
+				            if (data.code !== "Ok" || !data.routes.length) {
+				                throw new Error("No driving route found");
+				            }
+
+				            const route = data.routes[0];
+
+				            // GeoJSON coordinates are [longitude, latitude].
+				            const routeCoordinates =
+				                route.geometry.coordinates.map(function (coordinate) {
+				                    return [coordinate[1], coordinate[0]];
+				                });
+
+				            map.removeLayer(routeLine);
+
+				            routeLine = L.polyline(routeCoordinates, {
+				                color: "#2563eb",
+				                weight: 5
+				            }).addTo(map);
+
+				            routeLine.bringToBack();
+
+				            map.fitBounds(routeLine.getBounds(), {
+				                padding: [40, 40]
+				            });
+
+				            document.getElementById("trackingMessage").textContent =
+				                "Road distance: " +
+				                (route.distance / 1000).toFixed(2) +
+				                " km | Estimated driving time: " +
+				                Math.round(route.duration / 60) + " minutes";
+
+				        } catch (error) {
+				            console.error("Route error:", error);
+
+				            document.getElementById("trackingMessage").textContent =
+				                "Map loaded. Road route unavailable; showing a straight line.";
+				        }
+				    }
+
+				    loadRoadRoute();
+
+				    // 8. Refresh driver location every 10 seconds
+				    async function refreshTracking() {
+
+				        try {
+				            const response = await fetch(
+				                "/customer/shipment/" + shipmentId + "/tracking",
+				                { cache: "no-store" }
+				            );
+
+				            if (!response.ok) {
+				                throw new Error("Tracking endpoint returned " +
+				                                response.status);
+				            }
+
+				            const data = await response.json();
+
+				            updateDriverLocation({
+				                lat: Number(data.current_latitude),
+				                lng: Number(data.current_longitude)
+				            });
+
+				        } catch (error) {
+				            console.error("Tracking refresh error:", error);
+				        }
+				    }
+
+				    setInterval(refreshTracking, 10000);
+
+				    // Fix rendering if the map container initially has zero width.
+				    setTimeout(function () {
+				        map.invalidateSize();
+				        map.fitBounds(
+				            L.latLngBounds([pickup, delivery]),
+				            { padding: [40, 40] }
+				        );
+				    }, 300);
+
+				</script>
+				
+
+		        <!-- Pickup and Delivery -->
+		        <div class="panel mb-4">
+
+		            <h5 class="mb-3">Route Details</h5>
+
+		            <div class="row g-3">
+
+		                <div class="col-md-6">
+		                    <div class="border rounded p-3 h-100">
+		                        <h6 class="text-success">Pickup Location</h6>
+		                        <p class="mb-2"
+		                           th:text="${shipment.pickup_address}"></p>
+		                        <small class="text-muted">Coordinates</small>
+		                        <div>
+		                            <span th:text="${shipment.pickup_latitude}"></span>,
+		                            <span th:text="${shipment.pickup_longitude}"></span>
+		                        </div>
+		                        <small class="text-muted d-block mt-2">Pickup Time</small>
+		                        <span th:text="${shipment.pickup_datetime != null
+		                            ? #temporals.format(shipment.pickup_datetime, 'dd MMM yyyy hh:mm a')
+		                            : 'Not scheduled'}"></span>
+		                    </div>
+		                </div>
+
+		                <div class="col-md-6">
+		                    <div class="border rounded p-3 h-100">
+		                        <h6 class="text-danger">Delivery Location</h6>
+		                        <p class="mb-2"
+		                           th:text="${shipment.drop_address}"></p>
+		                        <small class="text-muted">Coordinates</small>
+		                        <div>
+		                            <span th:text="${shipment.drop_latitude}"></span>,
+		                            <span th:text="${shipment.drop_longitude}"></span>
+		                        </div>
+		                        <small class="text-muted d-block mt-2">Delivery Time</small>
+		                        <span th:text="${shipment.drop_datetime != null
+		                            ? #temporals.format(shipment.drop_datetime, 'dd MMM yyyy hh:mm a')
+		                            : 'Not delivered yet'}"></span>
+		                    </div>
+		                </div>
+
+		            </div>
+
+		        </div>
+
+		    </div>
+		</main>
+		
+	</div>
+
+</body>
+</html>

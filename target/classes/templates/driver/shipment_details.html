@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Driver Dashboard — AI Logistics</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" th:href="@{/assets/css/style.css}">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"/>
+	
+</head>
+<body onload="getCurrentLocation()">
+<div class="app-shell">
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <aside class="app-sidebar" id="appSidebar">
+    <a th:href="@{/driver/driver-dashboard}" class="navbar-brand mb-4 d-inline-flex"><span class="brand-mark">AL</span>AI Logistics</a>
+    <div class="sidebar-section-label">Driver</div>
+    <a th:href="@{/driver/driver-dashboard}" class="sidebar-link active"><i class="bi bi-grid-1x2"></i>My Deliveries</a>
+	<a th:href="@{/driver/driver-earnings}" class="sidebar-link"><i class="bi bi-grid-1x2"></i>My Earnings</a>
+	<div class="sidebar-section-label">Duty Status [<small th:text='${session.driver.rideStatus}'></small>] </div>
+	<a th:href="@{/driver/SetRideStatus}"  class="sidebar-link">
+			<i class="bi bi-box-arrow-right"></i>
+			<span th:if="${session.driver.rideStatus=='Busy'}">ON</span>
+			<span th:if="${session.driver.rideStatus=='Free'}">OFF</span>
+	</a>
+    <div class="sidebar-section-label">Account</div>
+    <a th:href="@{/logout}"  class="sidebar-link logout-link"><i class="bi bi-box-arrow-right"></i>Log out</a>
+  </aside>
+
+  <main class="app-main">
+		    <div class="app-topbar">
+		      <div class="d-flex align-items-center gap-3">
+		        <button class="btn btn-sm btn-ghost-light d-lg-none" id="sidebarToggle"><i class="bi bi-list"></i></button>
+		        <div class="fw-semibold">My Deliveries</div>
+		      </div>
+		    </div>
+		
+		    <div class="app-content text-white">
+		      <div class="app-topbar">
+		        <div class="d-flex align-items-center gap-3">
+		            <button class="btn btn-sm btn-ghost-light d-lg-none"
+		                    id="sidebarToggle">
+		                <i class="bi bi-list"></i>
+		            </button>
+		            <div class="fw-semibold">Shipment Tracking</div>
+		        </div>
+		    </div>
+		
+		      <!-- Shipment Information -->
+		        <div class="panel mb-4">
+
+		            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+		                <div>
+		                    <h5 class="mb-1">Shipment #<span th:text="${shipment.id}"></span></h5>
+		                    <small class="text-white"
+		                           th:text="${shipment.description}"></small>
+		                </div>
+
+						<a th:if="${shipment.status == 'Activated' or shipment.status == 'InTransit'}"
+						   class="badge bg-danger text-white"
+						   th:href="@{/shipment/ShipmentStatus(status='Delivered', email=${shipment.customer_id}, id=${shipment.id})}">
+						   Mark As Delivered
+						</a>
+		                <span class="text-warning" th:text="${shipment.status}">
+		                    Pending
+		                </span>
+		            </div>
+
+					<form th:action="@{/shipment/UpdateLocation}" method="post">
+						<span onclick="getCurrentLocation()" class="btn btn-sm"
+							style="background: rgba(59, 130, 246, .12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, .2); border-radius: 6px; font-size: .78rem;">
+							<i class="bi bi-crosshair me-1"></i> Use My Current GPS
+							Location
+						</span>
+						<input type="hidden" name="current_latitude" id="current_latitude"  />
+						<input type="hidden" name="current_longitude" id="current_longitude"  />
+						<input type="hidden" name="id" th:value='${shipment.id}'  />
+						<input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+						<button class="btn btn-sm btn-primary">Update Location</button>
+						<br/><br/>
+						<div id="map" style="height: 300px; width: 80%; margin:auto;"></div>
+					</form>
+					<br/><br/>
+		            <div class="row g-3">
+
+		                <div class="col-md-4">
+		                    <div class="border rounded p-3 h-100">
+		                        <small class="text-white">Customer</small>
+		                        <h6 class="mt-1 mb-0 text-info"
+		                            th:text="${shipment.customer_name}"></h6>
+		                        <small class="text-info" th:text="${shipment.customer_id}"></small>
+		                    </div>
+		                </div>
+
+		                <div class="col-md-4">
+		                    <div class="border rounded p-3 h-100">
+		                        <small class="text-white">Pickup Address:</small>
+		                        <h6 class="mt-1 mb-0 text-info" th:text="${shipment.pickup_address}"></h6>
+		                        <hr/>
+		                        <small class="text-white">Drop Address:</small>
+		                        <h6 class="mt-1 mb-0 text-info" th:text="${shipment.drop_address}"></h6>
+		                    </div>
+		                </div>
+
+		                <div class="col-md-4">
+		                    <div class="border rounded p-3 h-100">
+		                        <small class="text-white">Vehicle Type</small>
+		                        <h6 class="mt-1 mb-0 text-info"
+		                            th:text="${shipment.vtype}"></h6>
+		                        <small class="text-white">Shipment amount</small>
+		                        <div class="fw-bold text-info">
+		                            ₹<span th:text="${shipment.amount}"></span>
+		                        </div>
+		                    </div>
+		                </div>
+
+		            </div>
+		        </div>
+		        
+		        
+		        <h5 class="mb-3">Shipment details</h5>
+						<div class="g-2">
+							<div class="row align-items-center p-2 mx-0 rounded bg-light">
+								<div class="col-sm">
+									<a target="_blank"
+									   th:href="@{'https://www.google.com/maps/dir/?api=1&destination=' + ${shipment.drop_latitude} + ',' + ${shipment.drop_longitude} + '&travelmode=driving'}"
+									   class="btn btn-sm btn-success">
+									   🚗 Navigate
+									</a>
+								</div>
+							</div>
+							<div style="margin-top: 8px;">
+							    <iframe
+							        width="100%"
+							        height="300"
+							        style="border: 0; border-radius: 8px;"
+							        loading="lazy"
+							        allowfullscreen
+							        th:src="@{'https://maps.google.com/maps?output=embed&saddr='
+							            + ${shipment.pickup_latitude} + ',' + ${shipment.pickup_longitude}
+							            + '&daddr='
+							            + ${shipment.drop_latitude} + ',' + ${shipment.drop_longitude}}">
+							    </iframe>
+							</div>
+						</div>
+		        
+		    </div>
+		  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script type="text/javascript">
+	let map;
+	let marker;
+	function getCurrentLocation() {
+		if (!navigator.geolocation) {
+			alert("Geolocation is not supported by your browser.");
+			return;
+		}
+	
+		navigator.geolocation.getCurrentPosition(
+			function (position) {
+				const lat = position.coords.latitude;
+				const lng = position.coords.longitude;
+				// Save latitude and longitude
+			    document.getElementById("current_latitude").value = lat;
+			    document.getElementById("current_longitude").value = lng;
+				
+				loadMap(lat, lng);
+	
+			},
+			function (error) {
+				alert("Unable to get pickup location: " + error.message);
+			},
+			{
+				enableHighAccuracy: true,
+				timeout: 10000,
+				maximumAge: 0
+			}
+		);
+	}
+	function loadMap(lat = 28.6139, lng = 77.2090) {
+		if (map) {
+			map.remove();
+		}
+
+		map = L.map('map').setView([lat, lng], 15);
+
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			attribution: '&copy; OpenStreetMap contributors'
+		}).addTo(map);
+
+		marker = L.marker([lat, lng])
+			.addTo(map)
+			.bindPopup("Current Location")
+			.openPopup();
+
+		updateCoords(lat, lng);
+
+		// Move marker when map is clicked
+		map.on('click', function (e) {
+			const lat = e.latlng.lat;
+			const lng = e.latlng.lng;
+
+			marker.setLatLng([lat, lng])
+				.bindPopup("Current Location")
+				.openPopup();
+
+			updateCoords(lat, lng);
+		});
+	}
+
+	// Update Pickup Coordinates
+	async function updateCoords(lat, lng) {
+
+	    // Save latitude and longitude
+	    document.getElementById("current_latitude").value = lat;
+	    document.getElementById("current_longitude").value = lng;
+
+	}
+
+	// Load both maps when the page is ready
+	document.addEventListener('DOMContentLoaded', function () {
+		loadMap();
+	});						
+</script>
+</body>
+</html>
